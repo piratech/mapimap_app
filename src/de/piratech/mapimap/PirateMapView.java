@@ -1,17 +1,22 @@
 package de.piratech.mapimap;
 
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.util.ArrayList;
 
+import org.apache.http.Header;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
-import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.json.JSONArray;
 import org.json.JSONException;
+import org.json.JSONObject;
 
 import de.piratech.mapimap.R;
 import com.google.android.maps.GeoPoint;
@@ -106,7 +111,7 @@ public class PirateMapView extends MapActivity {
 		}
 	}
 
-	private static JSONArray getJSONfromURL(String url) {
+	private static JSONArray getJSONfromURL(String url, String post) {
 
 		// initialize
 		InputStream is = null;
@@ -116,7 +121,15 @@ public class PirateMapView extends MapActivity {
 		// http post
 		try {
 			HttpClient httpclient = new DefaultHttpClient();
-			HttpGet httppost = new HttpGet(url);
+			HttpPost httppost = new HttpPost(url);
+			
+			JSONObject jPost = new JSONObject();
+			jPost.put("map", post);
+			
+
+			httppost.setEntity(new StringEntity(jPost.toString()));
+			httppost.setHeader("Content-type", "application/json");
+			
 			HttpResponse response = httpclient.execute(httppost);
 			HttpEntity entity = response.getEntity();
 			is = entity.getContent();
@@ -141,7 +154,8 @@ public class PirateMapView extends MapActivity {
 
 		// try parse the string to a JSON object
 		try {
-			jArray = new JSONArray(sb.toString());
+			JSONObject jOpject = new JSONObject(sb.toString());
+			jArray = jOpject.getJSONArray("rows");
 		} catch (JSONException e) {
 			Log.e("getJSONfromURL", "Error parsing data " + e.toString());
 		}
@@ -162,8 +176,19 @@ public class PirateMapView extends MapActivity {
 		mMapView.setEnabled(true);
 		setContentView(mMapView);
 
+		Double distance = 50.0;
+		Double klat	= distance / 68;
+		Double klon	= distance / 111;
+		
 		Log.v("Trace", "Load Data");
-		JSONArray liste = getJSONfromURL("http://mapimap.piratech.de/android.php?lat="+String.valueOf(location.getLatitude())+"&lon="+String.valueOf(location.getLongitude()));
+		JSONArray liste = getJSONfromURL(
+				"https://xedp3x.iriscouch.com/mapimap/_temp_view",
+				"function(doc ) {if (((doc.locationData.lat > "+String.valueOf(location.getLatitude() - klat )+
+								 ")&& (doc.locationData.lat < "+String.valueOf(location.getLatitude() + klat )+
+								 ")&& (doc.locationData.lon > "+String.valueOf(location.getLongitude() - klon )+
+								 ")&& (doc.locationData.lon < "+String.valueOf(location.getLongitude() + klon )+
+								 ")))"+
+				"{emit(null, [doc.name, doc.type, doc.locationData.lat, doc.locationData.lon, doc.wikiUrl]);}}");
 
 		Log.v("Trace", "Process Data");
 		HelloItemizedOverlay ItemizedOverlay = new HelloItemizedOverlay(this.getResources().getDrawable(R.drawable.marker_gold), this);
@@ -175,11 +200,12 @@ public class PirateMapView extends MapActivity {
 		} else {
 			for (int i = 0; i < liste.length(); i++) {
 				try {
+					JSONArray data = liste.getJSONObject(i).getJSONArray("value");
 					OverlayItem item = new OverlayItem(new GeoPoint(
-							(int) (liste.getJSONObject(i).getDouble("lat") * 1E6),
-							(int) (liste.getJSONObject(i).getDouble("lon") * 1E6)),
-							liste.getJSONObject(i).getString("type") + ": " + liste.getJSONObject(i).getString("name"),
-							liste.getJSONObject(i).getString("url"));
+							(int) (data.getDouble(2) * 1E6),
+							(int) (data.getDouble(3) * 1E6)),
+							data.getString(1) + ": " + data.getString(0) ,
+							data.getString(4));
 					ItemizedOverlay.addOverlay(item);
 
 				} catch (Exception e1) {
