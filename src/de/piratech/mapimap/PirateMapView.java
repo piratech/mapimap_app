@@ -40,6 +40,7 @@ import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Toast;
 
 public class PirateMapView extends MapActivity {
 
@@ -72,24 +73,44 @@ public class PirateMapView extends MapActivity {
 		@Override
 		protected boolean onTap(int index) {
 			final OverlayItem item = mOverlays.get(index);
-			AlertDialog.Builder dialog = new AlertDialog.Builder(mContext);
-			//dialog.setTitle(titel);
-			dialog.setMessage(item.getTitle());
 
-			dialog.setCancelable(true);
+			AlertDialog.Builder builder = new AlertDialog.Builder(mContext);
+			// builder.setTitle("Pick a color");
 
-			dialog.setPositiveButton("weiterlesen",
-					new DialogInterface.OnClickListener() {
-				public void onClick(DialogInterface dialog, int id) {
-					// if this button is clicked, close
-					// current activity
-					Intent browserIntent = new Intent(
-							Intent.ACTION_VIEW, Uri.parse(item
-									.getSnippet()));
+			Log.v("Trace", "Search Items");
+			ArrayList<OverlayItem> list = new ArrayList<OverlayItem>();
+			for (int i = 0; i < mOverlays.size(); i++) {
+				if ((mOverlays.get(i).getPoint().getLatitudeE6() == item
+						.getPoint().getLatitudeE6())
+						&& (mOverlays.get(i).getPoint().getLongitudeE6() == item
+								.getPoint().getLongitudeE6())) {
+					list.add(mOverlays.get(i));
+				}
+
+			}
+
+			CharSequence[] items = new CharSequence[list.size()];
+			final String[] urls  = new String[list.size()];
+
+			Log.v("Trace", "Create Item List");
+			for (int i = 0; i < list.size(); i++) {
+				items[i] = list.get(i).getTitle();
+				urls[i]  = list.get(i).getSnippet();
+			}
+			
+			
+			Log.v("Trace", "Build List");
+			builder.setItems(items, new DialogInterface.OnClickListener() {
+				public void onClick(DialogInterface dialogInterface, int cnt) {
+					Log.v("Trace", "Open URL");
+					Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(urls[cnt]));
 					startActivity(browserIntent);
+					return;
 				}
 			});
-			dialog.show();
+			builder.create().show();
+			
+			Log.v("Trace", "Finish");
 			return true;
 		}
 	}
@@ -142,6 +163,7 @@ public class PirateMapView extends MapActivity {
 		super.onCreate(savedInstanceState);
 		Location location = ((LocationManager) this.getSystemService(Context.LOCATION_SERVICE)).getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
 
+		Log.v("Trace", "Create Map");
 		mMapView = new MapView(this, "06cfB-6Xolo4eJAwPrcvcwPBZJr3kyDCUJmOCqw");
 		mMapView.getController().setCenter( new GeoPoint((int) (location.getLatitude() * 1E6), (int) (location.getLongitude() * 1E6)));
 		mMapView.getController().setZoom(12);
@@ -149,8 +171,10 @@ public class PirateMapView extends MapActivity {
 		mMapView.setEnabled(true);
 		setContentView(mMapView);
 
+		Log.v("Trace", "Load Data");
 		JSONArray liste = getJSONfromURL("http://mapimap.piratech.de/android.php?lat="+String.valueOf(location.getLatitude())+"&lon="+String.valueOf(location.getLongitude()));
 
+		Log.v("Trace", "Process Data");
 		HelloItemizedOverlay ItemizedOverlay = new HelloItemizedOverlay(this.getResources().getDrawable(R.drawable.marker_gold), this);
 		if (liste == null) {
 			AlertDialog.Builder dialog = new AlertDialog.Builder(this);
@@ -163,7 +187,7 @@ public class PirateMapView extends MapActivity {
 					OverlayItem item = new OverlayItem(new GeoPoint(
 							(int) (liste.getJSONObject(i).getDouble("lat") * 1E6),
 							(int) (liste.getJSONObject(i).getDouble("lon") * 1E6)),
-							liste.getJSONObject(i).getString("name"),
+							liste.getJSONObject(i).getString("type") + ": " + liste.getJSONObject(i).getString("name"),
 							liste.getJSONObject(i).getString("url"));
 					ItemizedOverlay.addOverlay(item);
 
@@ -172,7 +196,9 @@ public class PirateMapView extends MapActivity {
 				}
 			}
 		}
+		Log.v("Trace", "Overlay Map");
 		mMapView.getOverlays().add(ItemizedOverlay);
+		Log.v("Trace", "Created");
 
 	}
 
