@@ -8,8 +8,7 @@ import java.util.ArrayList;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.entity.StringEntity;
+import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -24,6 +23,7 @@ import com.google.android.maps.OverlayItem;
 
 import android.annotation.TargetApi;
 import android.app.AlertDialog;
+import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -112,7 +112,7 @@ public class PirateMapView extends MapActivity {
 		}
 	}
 
-	private static JSONArray getJSONfromURL(String url, String post) {
+	private static JSONArray getJSONfromURL(String url) {
 
 		// initialize
 		InputStream is = null;
@@ -122,15 +122,7 @@ public class PirateMapView extends MapActivity {
 		// http post
 		try {
 			HttpClient httpclient = new DefaultHttpClient();
-			HttpPost httppost = new HttpPost(url);
-			
-			JSONObject jPost = new JSONObject();
-			jPost.put("map", post);
-			
-
-			httppost.setEntity(new StringEntity(jPost.toString()));
-			httppost.setHeader("Content-type", "application/json");
-			
+			HttpGet httppost = new HttpGet(url);
 			HttpResponse response = httpclient.execute(httppost);
 			HttpEntity entity = response.getEntity();
 			is = entity.getContent();
@@ -167,41 +159,29 @@ public class PirateMapView extends MapActivity {
 	
 	private class LoadData extends AsyncTask<String, Void, String> {
 		public PirateMapView mome;
-
+		private ProgressDialog pd;
+		private String error = null;
+		
 		protected String doInBackground(String... params) {
-
-			Double distance = 50.0;
-			Double klat = distance / 68;
-			Double klon = distance / 111;
-
 			Log.v("Trace", "Load Data");
 			JSONArray liste = getJSONfromURL(
-					"https://xedp3x.iriscouch.com/mapimap/_temp_view",
-					"function(doc ) {if (((doc.locationData.lat > "+ String.valueOf(location.getLatitude() - klat)
-								  + ")&& (doc.locationData.lat < " + String.valueOf(location.getLatitude() + klat)
-								  + ")&& (doc.locationData.lon > " + String.valueOf(location.getLongitude() - klon)
-								  + ")&& (doc.locationData.lon < " + String.valueOf(location.getLongitude() + klon)
-							+ ")))"
-					+ "{emit(null, [doc.name, doc.type, doc.locationData.lat, doc.locationData.lon, doc.wikiUrl]);}}");
+					"http://piratech.iriscouch.com/mapimap/_design/android/_view/v1");
 
 			Log.v("Trace", "Process Data");
 			HelloItemizedOverlay ItemizedOverlay = new HelloItemizedOverlay(
 					mome.getResources().getDrawable(R.drawable.marker_gold),
 					mome);
 			if (liste == null) {
-				AlertDialog.Builder dialog = new AlertDialog.Builder(mome);
-				dialog.setTitle("Error");
-				dialog.setMessage("Fehler beim Laden der Standorte");
-				dialog.show();
+				error = "Fehler beim Laden der Daten";
 			} else {
 				for (int i = 0; i < liste.length(); i++) {
 					try {
 						JSONArray data = liste.getJSONObject(i).getJSONArray(
 								"value");
 						OverlayItem item = new OverlayItem(new GeoPoint(
-								(int) (data.getDouble(2) * 1E6),
-								(int) (data.getDouble(3) * 1E6)),
-								data.getString(1) + ": " + data.getString(0),
+								(int) (data.getDouble(0) * 1E6),
+								(int) (data.getDouble(1) * 1E6)),
+								data.getString(2) + ": " + data.getString(3),
 								data.getString(4));
 						ItemizedOverlay.addOverlay(item);
 
@@ -209,24 +189,37 @@ public class PirateMapView extends MapActivity {
 						e1.printStackTrace();
 					}
 				}
+				
+				Log.v("Trace", "Overlay Map");
+				mome.mMapView.getOverlays().add(ItemizedOverlay);
+				Log.v("Trace", "Finishing");
+				mome.mMapView.getController().animateTo(
+						new GeoPoint((int) (location.getLatitude() * 1E6),
+								(int) (location.getLongitude() * 1E6)));
 			}
-			Log.v("Trace", "Overlay Map");
-			mome.mMapView.getOverlays().add(ItemizedOverlay);
-			Log.v("Trace", "Finishing");
-			mome.mMapView.getController().animateTo(
-					new GeoPoint((int) (location.getLatitude() * 1E6),
-							(int) (location.getLongitude() * 1E6)));
-
 			return "Executed";
 		}
 
 		@Override
 		protected void onPreExecute() {
+			pd = ProgressDialog.show(mome, "PiratenMap", "Suche Piraten in deiner Umgebung");
 		}
 
 		@Override
 		protected void onProgressUpdate(Void... values) {
 		}
+		
+		@Override
+		protected void onPostExecute(String result) {
+			super.onPostExecute(result);
+			pd.hide();
+			if (error != null) {
+				AlertDialog.Builder dialog = new AlertDialog.Builder(mome);
+				dialog.setTitle("Error");
+				dialog.setMessage(error);
+				dialog.show();
+			}
+		}	
 	}
 
 	@Override
@@ -245,7 +238,6 @@ public class PirateMapView extends MapActivity {
 		LoadData dl = new LoadData();
 		dl.mome = this;
 		dl.execute("");
-		
 
 	}
 
