@@ -234,7 +234,7 @@ public class PirateMapView extends MapActivity {
 		}
 		
 		Log.v("Trace", "Create Map");
-		mMapView = new MapView(this, "06cfB-6Xolo4eJAwPrcvcwPBZJr3kyDCUJmOCqw");
+		mMapView = new MapView(this, "06cfB-6Xolo5mw3byjrdy84fEaYVE4W6Q9c5jLQ");
 		
 		if (mMapView == null) {
 			AlertDialog.Builder dialog = new AlertDialog.Builder(this);
