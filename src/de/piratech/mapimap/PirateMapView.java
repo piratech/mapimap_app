@@ -227,8 +227,24 @@ public class PirateMapView extends MapActivity {
 		super.onCreate(savedInstanceState);
 		location = ((LocationManager) this.getSystemService(Context.LOCATION_SERVICE)).getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
 
+		if (location == null){
+			location = new Location("NETWORK");
+			location.setLatitude( 52.520803);
+			location.setLongitude(13.409450);
+		}
+		
 		Log.v("Trace", "Create Map");
 		mMapView = new MapView(this, "06cfB-6Xolo4eJAwPrcvcwPBZJr3kyDCUJmOCqw");
+		
+		if (mMapView == null) {
+			AlertDialog.Builder dialog = new AlertDialog.Builder(this);
+			dialog.setTitle("Error");
+			dialog.setMessage("Die App brauch Google Maps um zu starten!");
+			dialog.show();
+			this.finish();
+			
+		}
+		
 		mMapView.getController().setCenter( new GeoPoint((int) (location.getLatitude() * 1E6), (int) (location.getLongitude() * 1E6)));
 		mMapView.getController().setZoom(12);
 		mMapView.setClickable(true);
