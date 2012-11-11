@@ -1,11 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="de.piratech.mapimap">
+    package="de.piratech.mapimap" android:versionCode="1" android:versionName="1.0.0">
 
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.INTERNET" />
-
+	
+    <uses-sdk android:minSdkVersion="4"/>
+    <supports-screens android:resizeable="true"
+                  android:smallScreens="true"
+                  android:normalScreens="true"
+                  android:largeScreens="true"
+                  android:anyDensity="true"/>
+    
     <application android:label="PiratenMap"
             android:icon="@drawable/map" >
 
